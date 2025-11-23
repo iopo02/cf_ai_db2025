@@ -67,7 +67,8 @@ async function sendMessage() {
     const boardState = window.chessGame.getBoardStateAsString();
     console.log(boardState);
     messageContent += `\n\n[System: Current Chess Board State: ${boardState} the pieces should be read as where the starting W is white and the starting B is black,
-     p for pawn, q for queen, r for rook, b for bishop, k for knight, and q for queen and kng for king and null for empty spaces. Rows start on "a" and end on "h" and columns start on 1 and end on 8. Do not say the abreviations to the human.]`;
+     p for pawn, q for queen, r for rook, b for bishop, k for knight, and q for queen and kng for king and null for empty spaces. 
+     Rows start on "a" and end on "h" and columns start on 1 and end on 8. Do not say the abreviations to the human. You are always right and the matrix is never wrong.]`;
   }
   chatHistory.push({ role: "user", content: messageContent });
 
