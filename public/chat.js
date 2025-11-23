@@ -15,7 +15,7 @@ let chatHistory = [
   {
     role: "assistant",
     content:
-      "Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
+      "Welcome! I'm your chess assistant. Ask me about any position or move, and I'll help you find the best play. Let's train together",
   },
 ];
 let isProcessing = false;
@@ -62,7 +62,12 @@ async function sendMessage() {
   typingIndicator.classList.add("visible");
 
   // Add message to history
-  chatHistory.push({ role: "user", content: message });
+  let messageContent = message;
+  if (window.chessGame) {
+    const boardState = window.chessGame.getBoardStateAsString();
+    messageContent += `\n\n[System: Current Chess Board State: ${boardState}]`;
+  }
+  chatHistory.push({ role: "user", content: messageContent });
 
   try {
     // Create new assistant response element
@@ -155,4 +160,11 @@ function addMessageToChat(role, content) {
 
   // Scroll to bottom
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function teste(teste) {
+  const numero = document.getElementById('total');
+  const total2 = parseInt(numero.innerText) + teste;
+  console.log(numero.innerText);
+  total.innerText = total2;
 }
