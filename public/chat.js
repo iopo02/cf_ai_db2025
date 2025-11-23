@@ -162,9 +162,3 @@ function addMessageToChat(role, content) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function teste(teste) {
-  const numero = document.getElementById('total');
-  const total2 = parseInt(numero.innerText) + teste;
-  console.log(numero.innerText);
-  total.innerText = total2;
-}
