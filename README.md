@@ -1,3 +1,6 @@
+
+
+
 # Chess and LLM Chat Application
 
 A simple, ready-to-deploy chat application template powered by Cloudflare Workers AI. This project is based on Cloudflare's LLM Chat Template but has been significantly enhanced to include a fully functional 2-player chess game.
@@ -15,7 +18,23 @@ The application consists of a split-screen interface:
 - **Left Side**: A playable chess board with move validation, check/checkmate detection, and coordinate labels.
 - **Right Side**: An AI chat interface. When you send a message, the current state of the chess board (in matrix format) is silently appended to your message. This allows the LLM to "see" the board and provide relevant advice.
 
+
+
+### Prerequisites to run locally
+
+- [Node.js](https://nodejs.org/) (v18 or newer)
+
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)  
+
+- A Cloudflare account with Workers AI access
+
+
+### If you don't want to run locally you can try it out via deployed link
+
+https://cloudflaretest.david-belykh.workers.dev/
+
 ## Getting Started
+
 
 1. Clone this repository:
    ```bash
@@ -28,7 +47,12 @@ The application consists of a split-screen interface:
    npm install
    ```
 
-3. Run locally:
+3. Login to Cloudflare:
+   ```bash
+   npx wrangler login
+   ```
+
+4. Run locally:
    ```bash
    npm run dev
    ```
