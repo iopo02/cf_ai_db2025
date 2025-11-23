@@ -65,7 +65,9 @@ async function sendMessage() {
   let messageContent = message;
   if (window.chessGame) {
     const boardState = window.chessGame.getBoardStateAsString();
-    messageContent += `\n\n[System: Current Chess Board State: ${boardState}]`;
+    console.log(boardState);
+    messageContent += `\n\n[System: Current Chess Board State: ${boardState} the pieces should be read as where the starting W is white and the starting B is black,
+     p for pawn, q for queen, r for rook, b for bishop, k for knight, and q for queen and kng for king and null for empty spaces. Rows start on "a" and end on "h" and columns start on 1 and end on 8. Do not say the abreviations to the human.]`;
   }
   chatHistory.push({ role: "user", content: messageContent });
 
@@ -162,3 +164,14 @@ function addMessageToChat(role, content) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+
+
+
+[["BR", "BK", "BB", "BQ", "BKNG", "BB", "BK", "BR"],
+["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"],
+[null, null, null, null, null, null, null, null],
+[null, null, null, null, null, null, null, null],
+[null, null, "WP", null, null, null, null, null],
+[null, null, null, null, null, null, null, null],
+["WP", "WP", null, "WP", "WP", "WP", "WP", "WP"],
+["WR", "WK", "WB", "WQ", "WKNG", "WB", "WK", "WR"]]
