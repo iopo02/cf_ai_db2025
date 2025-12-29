@@ -1,16 +1,8 @@
-/**
- * LLM Chat App Frontend
- *
- * Handles the chat UI interactions and communication with the backend API.
- */
-
-// DOM elements
 const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
-// Chat state
 let chatHistory = [
   {
     role: "assistant",
@@ -20,13 +12,11 @@ let chatHistory = [
 ];
 let isProcessing = false;
 
-// Auto-resize textarea as user types
 userInput.addEventListener("input", function () {
   this.style.height = "auto";
   this.style.height = this.scrollHeight + "px";
 });
 
-// Send message on Enter (without Shift)
 userInput.addEventListener("keydown", function (e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -34,71 +24,143 @@ userInput.addEventListener("keydown", function (e) {
   }
 });
 
-// Send button click handler
 sendButton.addEventListener("click", sendMessage);
 
-/**
- * Sends a message to the chat API and processes the response
- */
+initVoiceChat();
+
+function initVoiceChat() {
+  const micBtn = document.getElementById('mic-chat-btn');
+  const voiceStatus = document.getElementById('voice-chat-status');
+  const voiceText = document.getElementById('voice-chat-text');
+
+  if (!micBtn) return;
+
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    micBtn.style.opacity = '0.5';
+    micBtn.title = "Voice control not supported";
+    micBtn.addEventListener('click', () => alert("Not supported in this browser"));
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.lang = 'en-US';
+  recognition.interimResults = true;
+
+  let isListening = false;
+
+  micBtn.addEventListener('click', () => {
+    if (isListening) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  });
+
+  recognition.onstart = () => {
+    isListening = true;
+    micBtn.classList.add('active');
+    voiceStatus.classList.remove('hidden');
+    voiceText.textContent = "Listening...";
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    micBtn.classList.remove('active');
+    voiceStatus.classList.add('hidden');
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = Array.from(event.results)
+      .map(result => result[0])
+      .map(result => result.transcript)
+      .join('');
+
+    userInput.value = transcript;
+    userInput.dispatchEvent(new Event('input'));
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Voice chat error", event.error);
+    isListening = false;
+    micBtn.classList.remove('active');
+    voiceStatus.classList.add('hidden');
+  };
+}
+
+document.querySelectorAll('.quick-action-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    userInput.value = btn.textContent;
+    sendMessage();
+  });
+});
+
 async function sendMessage() {
   const message = userInput.value.trim();
 
-  // Don't send empty messages
   if (message === "" || isProcessing) return;
 
-  // Disable input while processing
   isProcessing = true;
   userInput.disabled = true;
   sendButton.disabled = true;
 
-  // Add user message to chat
   addMessageToChat("user", message);
 
-  // Clear input
   userInput.value = "";
   userInput.style.height = "auto";
 
-  // Show typing indicator
   typingIndicator.classList.add("visible");
 
-  // Add message to history
-  let messageContent = message;
+  chatHistory.push({ role: "user", content: message });
+
+  const apiMessages = JSON.parse(JSON.stringify(chatHistory));
+
   if (window.chessGame) {
     const boardState = window.chessGame.getBoardStateAsString();
-    console.log(boardState);
-    messageContent += `\n\n[System: Current Chess Board State: ${boardState} the pieces should be read as where the starting W is white and the starting B is black,
-     p for pawn, q for queen, r for rook, b for bishop, k for knight, and q for queen and kng for king and null for empty spaces. 
-     Rows start on "a" and end on "h" and columns start on 1 and end on 8. Do not say the abreviations to the human. You are always right and the matrix is never wrong.]`;
+    const evaluation = window.chessGame.currentEvaluation;
+
+    let engineContext = '';
+    if (evaluation) {
+      const evalScore = typeof evaluation.score === 'number' ? evaluation.score.toFixed(2) : evaluation.score;
+      engineContext = `\n[Stockfish Analysis: Score: ${evalScore}, Best Move: ${evaluation.bestMove || 'Calculating...'}]`;
+    }
+
+    const systemContext = `\n\n[System: Current Chess Board State: ${boardState} 
+     Pieces: W=White, B=Black, P=Pawn, R=Rook, K=Knight, B=Bishop, Q=Queen, KNG=King.
+     Format: Raw 8x8 Array. Rows a-h, Cols 1-8 (standard chess).
+     IMPORTANT: 
+     1. Do NOT output the raw board array.
+     2. **CRITICAL**: If 'Best Move' is 'Calculating...', YOU MUST ANALYZE THE BOARD YOURSELF based on the provided matrix. **DO NOT** tell the user to wait. **DO NOT** mention that the engine is calculating. Just give your best chess advice immediately based on the visible piece positions.
+     3. Trust the Board Matrix over the Score. If pieces have moved, it is NOT the starting position, even if Score is 0.00.
+     4. ${engineContext}
+     5. Use the Stockfish Score if available (Positive=White adv, Negative=Black adv).]`;
+
+    apiMessages[apiMessages.length - 1].content += systemContext;
   }
-  chatHistory.push({ role: "user", content: messageContent });
 
   try {
-    // Create new assistant response element
     const assistantMessageEl = document.createElement("div");
     assistantMessageEl.className = "message assistant-message";
     assistantMessageEl.innerHTML = "<p></p>";
     chatMessages.appendChild(assistantMessageEl);
 
-    // Scroll to bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Send request to API
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messages: chatHistory,
+        messages: apiMessages,
       }),
     });
 
-    // Handle errors
     if (!response.ok) {
       throw new Error("Failed to get response");
     }
 
-    // Process streaming response
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let responseText = "";
@@ -110,29 +172,21 @@ async function sendMessage() {
         break;
       }
 
-      // Decode chunk
       const chunk = decoder.decode(value, { stream: true });
-
-      // Process SSE format
       const lines = chunk.split("\n");
       for (const line of lines) {
         try {
           const jsonData = JSON.parse(line);
           if (jsonData.response) {
-            // Append new content to existing text
             responseText += jsonData.response;
             assistantMessageEl.querySelector("p").textContent = responseText;
-
-            // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
           }
         } catch (e) {
-          console.error("Error parsing JSON:", e);
         }
       }
     }
 
-    // Add completed response to chat history
     chatHistory.push({ role: "assistant", content: responseText });
   } catch (error) {
     console.error("Error:", error);
@@ -141,10 +195,7 @@ async function sendMessage() {
       "Sorry, there was an error processing your request.",
     );
   } finally {
-    // Hide typing indicator
     typingIndicator.classList.remove("visible");
-
-    // Re-enable input
     isProcessing = false;
     userInput.disabled = false;
     sendButton.disabled = false;
@@ -152,27 +203,10 @@ async function sendMessage() {
   }
 }
 
-/**
- * Helper function to add message to chat
- */
 function addMessageToChat(role, content) {
   const messageEl = document.createElement("div");
   messageEl.className = `message ${role}-message`;
   messageEl.innerHTML = `<p>${content}</p>`;
   chatMessages.appendChild(messageEl);
-
-  // Scroll to bottom
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
-
-
-
-
-[["BR", "BK", "BB", "BQ", "BKNG", "BB", "BK", "BR"],
-["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"],
-[null, null, null, null, null, null, null, null],
-[null, null, null, null, null, null, null, null],
-[null, null, "WP", null, null, null, null, null],
-[null, null, null, null, null, null, null, null],
-["WP", "WP", null, "WP", "WP", "WP", "WP", "WP"],
-["WR", "WK", "WB", "WQ", "WKNG", "WB", "WK", "WR"]]
